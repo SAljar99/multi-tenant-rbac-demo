@@ -267,7 +267,3 @@ Errors are thrown with descriptive messages and surfaced in the UI (e.g. "Permis
 - **React** with TypeScript
 - **Cloud Firestore** (Firebase Web Client SDK)
 - **PostCSS** for styling (minimal CSS)
-
-## License
-
-MIT (or your preferred license).

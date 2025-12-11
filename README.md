@@ -1,23 +1,23 @@
 # Multi-Tenant RBAC Demo
 
-A demonstration of **role-based access control (RBAC)** in a multi-tenant application using **Next.js**, **TypeScript**, and **Cloud Firestore**.
+A demonstration of role-based access control (RBAC) in a multi-tenant application using Next.js, TypeScript, and Cloud Firestore.
 
 ## Overview
 
 This app showcases:
 
-- **Multi-tenant isolation**: Each tenant (Tenant A, Tenant B) can only see and modify their own data.
-- **Role-based permissions**: Users with `admin` role have more permissions than `staff` users.
+- **Multi-tenant isolation**: Each tenant (e.g. Tenant A, Tenant B) can only see and modify their own data.
+- **Role-based permissions**: Users with admin role have more permissions than staff users.
 - **Mock authentication**: Simple client-side auth context (no Firebase Auth integration).
-- **Clean data-access layer**: All Firestore logic centralized in `lib/orders.ts` with RBAC enforcement.
+- **Clean data-access layer**: All Firestore logic is centralized in lib/orders.ts with RBAC enforcement.
 
 ## Features
 
 ### Authentication (Mock)
 
 - **Login page** (`/login`): Select tenant, role, and username.
-- State stored in React Context (`AuthContext`).
-- No real identity verification (for demo purposes only).
+- State stored in React Context (AuthContext).
+- No real identity verification (demo-only).
 
 ### Orders Management
 
@@ -26,14 +26,14 @@ This app showcases:
 - **Delete orders**: Only admins can delete.
 - **Tenant isolation**: Users only see orders for their assigned tenant.
 
-### RBAC Rules
+## RBAC Rules
 
-#### Admin Role
+### Admin Role
 
 - ✅ Change order status to `pending`, `in_progress`, or `completed`
 - ✅ Delete orders
 
-#### Staff Role
+### Staff Role
 
 - ✅ Change order status from `pending` → `in_progress` only
 - ❌ Cannot change to any other status
@@ -61,7 +61,7 @@ orders/
     status: "pending" | "in_progress" | "completed"
 ```
 
-**Tenant isolation is enforced at the query level**: All Firestore queries filter by `tenantId`, and updates/deletes verify the order belongs to the user's tenant before proceeding.
+**Tenant isolation is enforced at the query level**: All Firestore queries filter by `tenantId`, and updates/deletes verify that the order belongs to the user's tenant before proceeding.
 
 ## Local Setup
 
@@ -87,9 +87,8 @@ orders/
 
 3. **Configure Firebase (optional)**
 
-   By default, the app uses a placeholder Firebase config in `lib/firebase.ts`. To use your own Firebase project:
-
-   Create a `.env.local` file at the project root:
+   By default, the app uses a placeholder Firebase config in `lib/firebase.ts`.
+   To use your own Firebase project, create a `.env.local` file at the project root:
 
    ```
    NEXT_PUBLIC_FIREBASE_API_KEY=your_api_key
@@ -100,7 +99,7 @@ orders/
    NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
    ```
 
-   (If using the placeholder config, you can skip this.)
+   If you're just testing locally with the placeholder config, you can skip this.
 
 ### Running Locally
 
@@ -112,24 +111,24 @@ Visit `http://localhost:3000/login` in your browser.
 
 ### Demo Flow
 
-1. **Login**:
+1. **Login**
 
-   - Select "Tenant A" or "Tenant B"
-   - Select "admin" or "staff" role
+   - Select Tenant A or Tenant B
+   - Select admin or staff role
    - Enter a username
-   - Click "Login"
+   - Click Login
 
-2. **Dashboard**:
+2. **Dashboard**
 
-   - You'll see your assigned tenant, role, and username.
-   - Click "Seed Demo Data" to populate sample orders (one-time setup).
-   - Use the "Create New Order" form to add orders.
-   - Click status buttons to change order status (respects RBAC rules).
+   - See the current tenant, role, and username.
+   - Click Seed Demo Data to populate sample orders (one-time setup).
+   - Use Create New Order to add new orders.
+   - Use status buttons to change order status (RBAC rules apply).
    - Delete button appears only for admins.
 
-3. **Permission Enforcement**:
-   - If a staff user tries to delete an order or change status to an invalid state, an error message appears.
-   - All permission checks happen in `lib/orders.ts` (data-access logic).
+3. **Permission Enforcement**
+   - If a staff user tries to delete an order or move to an invalid status, an error message appears.
+   - All permission checks are implemented in `lib/orders.ts` (data-access layer).
 
 ## Project Structure
 
@@ -157,19 +156,21 @@ public/                         # Static assets
 
 ### Where is RBAC enforced?
 
-**`lib/orders.ts`** contains all permission and tenant checks:
+All RBAC and tenant checks live in `lib/orders.ts`:
 
-- `updateOrderStatus()`: Validates role and allowed state transitions.
-- `deleteOrder()`: Ensures only admins can delete.
-- `getOrdersForTenant()`: Queries only the specified tenant's orders.
+- `getOrdersForTenant(tenantId)`: Returns only that tenant's orders.
+- `updateOrderStatus(...)`: Validates role and allowed state transitions.
+- `deleteOrder(...)`: Ensures only admins can delete.
 
-All errors are thrown with descriptive messages and caught in the UI (e.g., "Permission denied: staff cannot delete orders.").
+Both update/delete operations verify the order's `tenantId` matches the current user's `tenantId`.
+
+Errors are thrown with descriptive messages and surfaced in the UI (e.g. "Permission denied: staff cannot delete orders.").
 
 ### How is tenant isolation enforced?
 
 1. **Query level**: `getOrdersForTenant()` uses `where('tenantId', '==', tenantId)`.
-2. **Update/Delete level**: `updateOrderStatus()` and `deleteOrder()` fetch the order first and verify `order.tenantId === tenantId` before proceeding.
-3. **Input validation**: The UI passes `tenantId` from `AuthContext`, and the data-access layer accepts it as a parameter.
+2. **Update/Delete level**: `updateOrderStatus()` and `deleteOrder()` fetch the order, check `order.tenantId === tenantId`, then proceed.
+3. **Input validation**: The UI passes `tenantId` from `AuthContext`, and the data-access layer always receives it as an explicit parameter.
 
 ## Deploying to Firebase Hosting
 
@@ -192,40 +193,81 @@ All errors are thrown with descriptive messages and caught in the UI (e.g., "Per
    firebase deploy
    ```
 
-   This will use the existing `firebase.json` and `firestore.rules` in the repo.
+   This uses the existing `firebase.json` and `firestore.rules` in the repo.
 
 3. **Access your app**
+
    ```
    https://<your-project-id>.web.app
    ```
 
-## Limitations & Future Improvements
+## Limitations
 
-### Current Limitations
+- **Mock authentication only**: No real user identity. State is cleared on page refresh.
+- **Client-side RBAC**: Rules are enforced in the browser, not in Firestore Security Rules.
+- **No auth persistence**: Auth state is not stored in localStorage/sessionStorage.
+- **Public Firebase config**: Config is exposed in the client (acceptable for a demo, but requires strong security rules in production).
 
-- **Mock authentication**: No real user identity. State is cleared on page refresh.
-- **Client-side RBAC only**: Rules are enforced in the browser. For production, implement Firestore Security Rules.
-- **No persistence**: Auth state is lost on refresh. Use localStorage or session storage for persistence.
-- **Firestore exposed**: Firebase config is public (but appropriate for demo; use security rules in production).
+## Future Plans & Roadmap
 
-### Recommended Improvements
+### Short Term
 
-1. **Firestore Security Rules**: Enforce multi-tenant & role-based access at the database level.
-2. **Real Firebase Auth**: Integrate Firebase Authentication for real identity.
-3. **Session persistence**: Save auth state to `localStorage` and restore on app load.
-4. **Server-side rendering**: Pre-fetch orders on the server to improve performance.
-5. **Advanced UI**: Add filtering, sorting, pagination for large order lists.
-6. **Audit logging**: Track who made what changes and when.
-7. **API rate limiting & validation**: Add server-side validation and rate limiting for production.
+- 🔐 **Add Firestore Security Rules**
+
+  - Enforce tenant isolation (`tenantId`) at the database level.
+  - Enforce role-based operations (admin vs staff) on reads/writes.
+
+- 👤 **Integrate Real Authentication**
+
+  - Use Firebase Authentication (email/password or OAuth).
+  - Map authenticated users to tenants and roles.
+
+- 💾 **Persist Auth State**
+  - Store auth context in localStorage or cookies.
+  - Automatically restore the session on page reload.
+
+### Medium Term
+
+- 🧩 **API Layer & Server-Side RBAC**
+
+  - Introduce Next.js API routes or server actions.
+  - Move RBAC checks from client-side to server-side.
+  - Add centralized error handling and request validation.
+
+- 📊 **Improved Orders UI**
+
+  - Filtering, sorting, and pagination.
+  - Status badges, search by customer name.
+  - Better empty/loading/error states.
+
+- 📝 **Audit Logging**
+  - Log status changes and deletions (who did what and when).
+  - Display basic activity history per order.
+
+### Longer Term
+
+- 🏢 **Advanced Tenant Management**
+
+  - Tenant admin dashboard for managing users and roles.
+  - Support more than two tenants and dynamic tenant creation.
+
+- 🚀 **Production-Grade Hardening**
+
+  - CI/CD pipeline (lint, tests, deploy).
+  - Rate limiting / basic abuse protection.
+  - Monitoring and logging integration (e.g. Cloud Logging).
+
+- 🌐 **Multi-Region / Scalability Considerations**
+  - Evaluate Firestore/hosting region choices per tenant.
+  - Plan for higher data volumes and more complex RBAC rules.
 
 ## Technologies Used
 
-- **Next.js 16** (App Router)
-- **TypeScript**
-- **React 19**
+- **Next.js** (App Router)
+- **React** with TypeScript
 - **Cloud Firestore** (Firebase Web Client SDK)
 - **PostCSS** for styling (minimal CSS)
 
 ## License
 
-MIT (or your preferred license)
+MIT (or your preferred license).

@@ -16,7 +16,7 @@ This app showcases:
 ### Authentication (Mock)
 
 - **Login page** (`/login`): Select tenant, role, and username.
-- State stored in React Context (AuthContext).
+- State stored in browser localStorage for session persistence.
 - No real identity verification (demo-only).
 
 ### Orders Management
@@ -121,7 +121,6 @@ Visit `http://localhost:3000/login` in your browser.
 2. **Dashboard**
 
    - See the current tenant, role, and username.
-   - Click Seed Demo Data to populate sample orders (one-time setup).
    - Use Create New Order to add new orders.
    - Use status buttons to change order status (RBAC rules apply).
    - Delete button appears only for admins.
@@ -134,10 +133,10 @@ Visit `http://localhost:3000/login` in your browser.
 
 ```
 app/
-  context/AuthContext.tsx       # Mock auth state & hooks
-  login/page.tsx                # Login page UI
-  orders/page.tsx               # Main orders dashboard
-  layout.tsx                    # Root layout with AuthProvider
+  login/page.tsx                # Login page UI (saves to localStorage)
+  orders/page.tsx               # Main orders dashboard (reads from localStorage)
+  page.tsx                      # Welcome/home page
+  layout.tsx                    # Root layout
   globals.css                   # Global styles
 
 lib/
@@ -170,7 +169,7 @@ Errors are thrown with descriptive messages and surfaced in the UI (e.g. "Permis
 
 1. **Query level**: `getOrdersForTenant()` uses `where('tenantId', '==', tenantId)`.
 2. **Update/Delete level**: `updateOrderStatus()` and `deleteOrder()` fetch the order, check `order.tenantId === tenantId`, then proceed.
-3. **Input validation**: The UI passes `tenantId` from `AuthContext`, and the data-access layer always receives it as an explicit parameter.
+3. **Input validation**: The UI reads `tenantId` from localStorage and passes it to the data-access layer, which receives it as an explicit parameter.
 
 ## Deploying to Firebase Hosting
 
@@ -203,9 +202,9 @@ Errors are thrown with descriptive messages and surfaced in the UI (e.g. "Permis
 
 ## Limitations
 
-- **Mock authentication only**: No real user identity. State is cleared on page refresh.
+- **Mock authentication only**: No real user identity or identity verification.
 - **Client-side RBAC**: Rules are enforced in the browser, not in Firestore Security Rules.
-- **No auth persistence**: Auth state is not stored in localStorage/sessionStorage.
+- **localStorage persistence**: Auth state clears on manual localStorage deletion or browser data wipe.
 - **Public Firebase config**: Config is exposed in the client (acceptable for a demo, but requires strong security rules in production).
 
 ## Future Plans & Roadmap
@@ -222,9 +221,9 @@ Errors are thrown with descriptive messages and surfaced in the UI (e.g. "Permis
   - Use Firebase Authentication (email/password or OAuth).
   - Map authenticated users to tenants and roles.
 
-- 💾 **Persist Auth State**
-  - Store auth context in localStorage or cookies.
-  - Automatically restore the session on page reload.
+- 💾 **Improve Auth Persistence**
+  - Add logout confirmation dialogs.
+  - Implement session timeout with warnings.
 
 ### Medium Term
 

@@ -1,24 +1,37 @@
 'use client';
 
-import { useAuth } from '@/app/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import CreateOrderForm from '@/components/CreateOrderForm';
 import OrderList from '@/components/OrderList';
-import { seedDemoData } from '@/lib/orders';
+
+type TenantId = 'tenantA' | 'tenantB';
+type Role = 'admin' | 'staff';
 
 export default function OrdersPage() {
-  const { tenantId, role, username, logout } = useAuth();
   const router = useRouter();
+  const [tenantId, setTenantId] = useState<TenantId | null>(null);
+  const [role, setRole] = useState<Role | null>(null);
+  const [username, setUsername] = useState<string | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-  const [isSeeding, setIsSeeding] = useState(false);
-  const [seedError, setSeedError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (!tenantId || !role || !username) {
+    // Read from localStorage on mount
+    const savedUsername = localStorage.getItem('username');
+    const savedTenantId = localStorage.getItem('tenantId') as TenantId | null;
+    const savedRole = localStorage.getItem('role') as Role | null;
+
+    if (!savedUsername || !savedTenantId || !savedRole) {
       router.push('/login');
+      return;
     }
-  }, [tenantId, role, username, router]);
+
+    setUsername(savedUsername);
+    setTenantId(savedTenantId);
+    setRole(savedRole);
+    setIsLoading(false);
+  }, [router]);
 
   const tenantName = tenantId === 'tenantA' ? 'Tenant A' : 'Tenant B';
 
@@ -26,25 +39,14 @@ export default function OrdersPage() {
     setRefreshTrigger((prev) => prev + 1);
   };
 
-  const handleSeedData = async () => {
-    setIsSeeding(true);
-    setSeedError(null);
-    try {
-      await seedDemoData();
-      setRefreshTrigger((prev) => prev + 1);
-    } catch (err) {
-      setSeedError(err instanceof Error ? err.message : 'Failed to seed demo data');
-    } finally {
-      setIsSeeding(false);
-    }
-  };
-
   const handleLogout = () => {
-    logout();
+    localStorage.removeItem('username');
+    localStorage.removeItem('tenantId');
+    localStorage.removeItem('role');
     router.push('/login');
   };
 
-  if (!tenantId || !role || !username) {
+  if (isLoading || !tenantId || !role || !username) {
     return null;
   }
 
@@ -81,22 +83,6 @@ export default function OrdersPage() {
 
       {/* Main content */}
       <div className="max-w-4xl mx-auto px-6 py-8">
-        {/* Seed button */}
-        <div className="mb-6">
-          <button
-            onClick={handleSeedData}
-            disabled={isSeeding}
-            className="px-4 py-2 bg-emerald-500 text-white rounded hover:bg-emerald-600 disabled:bg-gray-400 transition-colors text-sm font-medium"
-          >
-            {isSeeding ? 'Seeding...' : 'Seed Demo Data'}
-          </button>
-          {seedError && (
-            <div className="mt-2 p-3 bg-red-50 text-red-700 rounded text-sm border border-red-200">
-              {seedError}
-            </div>
-          )}
-        </div>
-
         {/* Create Order Form */}
         <CreateOrderForm
           tenantId={tenantId}
